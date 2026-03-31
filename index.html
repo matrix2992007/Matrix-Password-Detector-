@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>Matrix Real Decryptor</title>
+    <style>
+        body { margin: 0; background: #000; color: #0f0; font-family: sans-serif; overflow: hidden; display: flex; justify-content: center; align-items: center; height: 100vh; }
+        canvas { position: absolute; top: 0; left: 0; z-index: 1; }
+        .container { position: relative; z-index: 2; width: 420px; padding: 30px; background: rgba(255, 255, 255, 0.07); backdrop-filter: blur(20px); border: 1px solid rgba(0, 255, 0, 0.2); border-radius: 20px; text-align: center; box-shadow: 0 0 30px rgba(0, 255, 0, 0.1); }
+        .upload-box { border: 2px dashed #0f0; padding: 40px; border-radius: 15px; cursor: pointer; transition: 0.3s; margin-bottom: 20px; }
+        .upload-box:hover { background: rgba(0, 255, 0, 0.1); }
+        .counter-box { display: none; margin-top: 20px; }
+        .count { font-size: 35px; color: #fff; text-shadow: 0 0 15px #0f0; font-family: monospace; }
+        #status { font-size: 14px; margin-top: 10px; color: #888; }
+        .btn-matrix { background: #0f0; color: #000; border: none; padding: 10px 25px; border-radius: 5px; font-weight: bold; cursor: pointer; display: none; margin: 10px auto; }
+    </style>
+</head>
+<body>
+    <canvas id="matrix"></canvas>
+    <div class="container">
+        <h1>MATRIX DECRYPTOR</h1>
+        <div class="upload-box" id="dropZone">
+            <p id="fileText">اسحب ملف ZIP المحمي هنا</p>
+            <input type="file" id="fileInput" hidden accept=".zip">
+        </div>
+        <div id="status">جاهز للاختراق...</div>
+        <div class="counter-box" id="counterBox">
+            <div id="loadingText">جاري تجربة الاحتمالات...</div>
+            <div class="count" id="number">0</div>
+        </div>
+    </div>
+
+    <script>
+        // Matrix Background Logic
+        const canvas = document.getElementById('matrix');
+        const ctx = canvas.getContext('2d');
+        canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+        const letters = "0101010101010101"; const fontSize = 16;
+        const columns = canvas.width / fontSize; const drops = Array(Math.floor(columns)).fill(1);
+        function draw() {
+            ctx.fillStyle = "rgba(0, 0, 0, 0.05)"; ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = "#0f0"; ctx.font = fontSize + "px monospace";
+            drops.forEach((y, i) => {
+                const text = letters[Math.floor(Math.random() * letters.length)];
+                ctx.fillText(text, i * fontSize, y * fontSize);
+                if (y * fontSize > canvas.height && Math.random() > 0.975) drops[i] = 0;
+                drops[i]++;
+            });
+        }
+        setInterval(draw, 33);
+
+        // Core Cracking Logic
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+
+        dropZone.onclick = () => fileInput.click();
+
+        fileInput.onchange = async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            document.getElementById('fileText').innerText = file.name;
+            document.getElementById('status').innerText = "تم رفع الملف.. ابدأ الكسر";
+            
+            const formData = new FormData();
+            formData.append('file', file);
+
+            // إظهار العداد الوهمي أثناء المعالجة الحقيقية
+            document.getElementById('counterBox').style.display = "block";
+            let fakeCount = 0;
+            const timer = setInterval(() => {
+                fakeCount += Math.floor(Math.random() * 850);
+                document.getElementById('number').innerText = fakeCount;
+            }, 50);
+
+            // إرسال الملف للسيرفر (Back-end)
+            try {
+                const response = await fetch('http://127.0.0.1:5000/crack', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+
+                clearInterval(timer); // وقف العداد لما النتيجة تيجي
+
+                if (data.success) {
+                    document.getElementById('number').innerText = data.password;
+                    document.getElementById('status').innerText = "تم كسر الحماية بنجاح! ✅";
+                    document.getElementById('loadingText').innerText = "كلمة السر هي:";
+                } else {
+                    document.getElementById('status').innerText = data.message;
+                    document.getElementById('number').innerText = "FAILED";
+                }
+            } catch (err) {
+                clearInterval(timer);
+                document.getElementById('status').innerText = "خطأ: تأكد من تشغيل ملف app.py";
+            }
+        };
+    </script>
+</body>
+</html>
